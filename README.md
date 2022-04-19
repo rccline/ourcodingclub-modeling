@@ -6,7 +6,9 @@ Access to the tutorals and Courses, together with links and contact info for Our
 
 Our Coding Club is a "positive peer-learning community" that has prepared Tutorials, Workshops and Courses in Data Science for Ecologists and Environmental Scientists. 
 
-LICENSE for Our Coding Club Tutorials and Courses is created under the [Creative Commons License 4.0](https://creativecommons.org/licenses/by-sa/4.0/) 
-This whole repository, with few exceptions, is my practice of the exercises of the tutorals prepared by Our Coding Club.    
+**LICENSE**  
+The license for this work created by Our Coding Club which include Tutorials and Courses is created under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/)  
 
+This whole repository, with few exceptions, is my practice of the exercises of the tutorals prepared by Our Coding Club.  April 18, 2022  
 
+ 

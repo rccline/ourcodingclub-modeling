@@ -1,0 +1,136 @@
+---
+title: "Linear Model 2"
+author: "Robert C Cline Sr"
+date: '2022-04-14'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE) 
+library(kableExtra)
+library(tidyverse)
+library(here)
+```
+
+## ANOVA is a linear regression  on a continuous response variable.  
+
+We just did with the apples in *01-LinearModels.Rmd*: how does the mean yield vary depending on the spacing category? 
+
+It is also a linear model, but instead of getting a slope that allows us to predict the yield for any value of spacing, we get an estimate of the yield for each category.
+
+```{r}
+anova(apples.m)
+```
+
+
+We will use the *ilri.sheep* dataset, also from the agridat package.  
+
+**question**: Is the weight of lambs at weaning a function of their age at weaning?, with the hypothesis that lambs that are weaned later are also heavier.  
+
+```{r results='asis'}
+sheep <- agridat::ilri.sheep   # load the data
+
+library(dplyr)
+sheep <- filter(sheep, ewegen == "R")   # there are confounding variables in this dataset that we don't want to take into account. We'll only consider lambs that come from mothers belonging to the breed "R".
+
+head(sheep)  # overview of the data; we'll focus on weanwt (wean weight) and weanage
+
+sheep.m1 <- lm(weanwt ~ weanage, data = sheep)   # run the model
+summary(sheep.m1)                                # study the output
+
+```
+
+<br> 
+
+
+**Table 1.** Estimate is Intercept when lamb is 0 days old.
+```{r}
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)  
+
+tab_model(sheep.m1)
+```
+
+<br> 
+
+* $lamb weight = 2.60 + 0.08(age)$ 
+
+<br> 
+
+
+```{r eval=FALSE}
+library(gtsummary)
+
+sheep.m2 <- tbl_regression(sheep.m1, 
+                     exponentiate = FALSE
+                     ) %>% 
+    add_global_p() %>% 
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC))
+sheep.m2
+
+```
+
+<br> 
+<br> 
+
+
+```{r echo=FALSE, out.width='100%'}
+knitr::include_graphics(here('img/sheep.m1.PNG'))
+``` 
+
+
+### Weanage accounts for only 20% of the weight at weaning.  What if the sex of lamb influences weight gain?    
+
+```{r results='asis'}
+sheep.m2 <- lm(weanwt ~ weanage*sex, data = sheep)
+summary(sheep.m2)
+
+```
+
+<br> 
+
+```{r echo=FALSE, out.width='100%'}
+knitr::include_graphics(here('img/sheep.m2.PNG'))
+``` 
+
+<br> 
+
+**Female weight = 3.66 + 0.06(age)** : The weight at 100 days would be 3.66 + 0.06(100) = 9.66 kg.  
+
+**Male weight = 3.66 + [-2.52] + 0.06(age) + [0.03(age)]** : The weight at 100 days would be 3.66 - 2.52 + (0.06+0.03)(100) = 10.14 kg.  
+
+### Visualize the data for weanage.  
+* [Create *theme.clean*](https://ourcodingclub.github.io/tutorials/data-vis-2/index.html)
+```{r}
+theme.clean <- function(){
+  theme_bw()+
+  theme(axis.text.x = element_text(size = 12, angle = 45, vjust = 1, hjust = 1),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(size = 14, face = "plain"),             
+        axis.title.y = element_text(size = 14, face = "plain"),             
+        panel.grid.major.x = element_blank(),                                          
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_blank(),  
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), units = , "cm"),
+        plot.title = element_text(size = 20, vjust = 1, hjust = 0.5),
+        legend.text = element_text(size = 12, face = "italic"),          
+        legend.position = "right")
+}
+``` 
+
+
+```{r}
+(sheep.p <- ggplot(sheep, aes(x = weanage, y = weanwt)) +
+      geom_point(aes(colour = sex)) +                                # scatter plot, coloured by sex
+      labs(x = "Age at weaning (days)", y = "Wean weight (kg)") +
+      stat_smooth(method = "lm", aes(fill = sex, colour = sex)) +    # adding regression lines for each sex
+      scale_colour_manual(values = c("#FFC125", "#36648B")) +
+      scale_fill_manual(values = c("#FFC125", "#36648B")) +
+      theme.clean() )
+```
+

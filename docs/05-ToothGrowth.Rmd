@@ -1,0 +1,158 @@
+---
+title: "05 ToothGrowth"
+author: "Robert C Cline Sr"
+date: '2022-04-16'
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE) 
+library(kableExtra)
+library(tidyverse)
+library(here)
+# library(readr) 
+#
+# sjplots --- 
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)  
+
+# tab_model(weevil.m)
+```
+
+
+```{r, include=FALSE} 
+
+source("../scripts/theme.clean.R", local = knitr::knit_global())
+# or sys.source("your-script.R", envir = knitr::knit_global())
+```
+
+<br>  
+<br> 
+
+
+#### **ToothGrowth** is a built-in dataset describing tooth growth in *Cavia porcellus* (South American guinea pigs) under different vitamin C treatments.  `data()`  
+
+1. Are higher doses of vitamin C beneficial for tooth growth?  
+  - see Figure 1.  
+2. Does the method of administration (orange juice, OJ, or ascorbic acid, VC) influence the effect of the dose?  
+  - See Figures 2 and 3. 
+3. What would be the predicted tooth length of a guinea pig given 1 mg of vitamin C as ascorbic acid?  
+
+* To identify datasets which are loaded type:  `data()`  
+
+data(ToothGrowth)
+
+**Table 1**. Summary of ToothGrowth dataset.  
+```{r}
+summary(ToothGrowth)  %>% 
+  # library(kableExtra)
+ 
+  kbl(caption = "OJ = Orange Juice; VC = ascorbic acid") %>% 
+  kable_classic(full_width = F, html_font = "Cambria", position = "left")  
+  
+```
+
+<br> 
+
+**Table 2**. Sample OBS of ToothGrowth dataset.  
+```{r} 
+
+set.seed(123)
+sample_n(ToothGrowth, 6)  %>% 
+  # library(kableExtra)
+ 
+  kbl(caption = "OJ = Orange Juice; VC = ascorbic acid") %>% 
+  kable_classic(full_width = F, html_font = "Cambria", position = "left")  
+  
+``` 
+
+```{r fig.cap='Figure 1. Tooth Growth as a function of Vitamin C dose'}
+(tooth.p <- ToothGrowth %>% 
+   filter(supp == "OJ") %>% 
+   ggplot(aes(x = dose, y = len)) +
+       ggtitle('') +
+    geom_point(colour = "#483D8B") +
+    geom_smooth(method = glm, colour = "#483D8B", fill = "#483D8B", alpha = 0.6) +
+   # scale_x_continuous(breaks = c(1975, 1980, 1985, 1990, 1995, 2000, 2005)) +
+    theme.clean() +
+    labs(x = " ", y = "Length of Tooth Growth")) 
+```
+
+
+
+```{r eval=FALSE}
+tooth.p + tooth.p2
+```
+
+<br> 
+
+```{r fig.cap='Figure 2. Tooth Length and Supplement Type'}
+ 
+
+library(ggplot2)
+
+(teeth.p <- ggplot(ToothGrowth, aes(len, supp)) + 
+    ggtitle('') +
+    geom_boxplot(fill = "#CD3333", alpha = 0.8, colour = "#8B2323") +
+    theme.clean() +  
+    theme(axis.text.x = element_text(size = 12, angle = 0)) +
+  labs(x = "Tooth Length", y = "Supplement")) +
+  facet_grid(.~supp)
+
+
+``` 
+
+<br> 
+
+```{r fig.cap='Figure 3. Tooth Growth Dependence on Dose and Supplement'}
+ToothGrowth$dose=as.factor(ToothGrowth$dose)
+ggplot(ToothGrowth, aes(x=dose,y=len))+geom_boxplot(aes(fill = dose))+
+ggtitle('')+ facet_grid(.~supp)+
+theme(axis.title.y = element_text(colour="gray20",size=12,angle=90,hjust=.5,vjust=1),
+   axis.title.x = element_text(colour="gray20"),
+plot.title = element_text(vjust=1.5,size = 12,colour="black"),
+axis.text.x = element_text(colour="red",size=10,angle=45,hjust=.5, vjust=.5)) +
+  labs(y = "Length (mm)") +
+  labs(x = "dose (mg)")
+```
+
+What would be the predicted tooth length of a guinea pig given 1 mg of vitamin C as ascorbic acid?  
+```{r results='asis'}
+# comment=NA # to remove all hashes
+teeth.m <- lm(len ~ dose + supp, data = ToothGrowth)
+# summary(apples.m) 
+
+
+```
+
+<br> 
+
+**Table 3.** Regression Summary for tooth growth in guinea pigs with Vitamin C supplementation.
+```{r}
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)  
+
+tab_model(teeth.m)
+```
+
+<br> 
+
+```{r}
+d1 <- data.frame(dose = as.factor(1), supp="OJ")
+predict(teeth.m, d1, interval = "prediction")
+```
+
+
+Predicted from the model *teeth.m*, a dose of 1 mg of vitamine C as ascorbic acid is expected 
+result in a tooth length of `r predict(teeth.m, d1, inteval = "prediction")` mm.^[**Question**:  Why does my calculation differ from the prediction calcuated from Table 3?]  
+
+to be 21.59 mm; 95% CI = 19.17  to 24.01.
+
+12.46 + 9.13 = 21.59 mm
+Min 12.46 + 6.71 = 19.17
+Max 12.46 + 11.55 = 24.01  
+
+

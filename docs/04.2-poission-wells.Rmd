@@ -1,0 +1,179 @@
+---
+title: "04.2 - Poisson-distribution NE Wells"
+author: "Robert C Cline Sr"
+date: "April 18, 2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE) 
+library(kableExtra)
+library(tidyverse)
+library(here)
+library(readr)
+library(tidyverse)
+library(here)  
+library(lubridate)
+library(RODBC) 
+library(janitor)
+library(stringr) 
+library(gt) 
+
+```
+
+```{r, include=FALSE} 
+# source(here("scripts", "theme.clean.R", local = knitr::knit_global()))
+# source("../scripts/theme.clean.R", local = knitr::knit_global())
+# or sys.source("your-script.R", envir = knitr::knit_global())
+``` 
+
+```{r}  
+# pathtallgrass <- "E:/tallgrass/data/NebraskaWellData_Paleozoic_Working.accdb"
+# accdbfetch("E:/tallgrass/data/NebraskaWellData_Paleozoic_Working.accdb")
+
+# accdbfetch::accdb_fetch(pathtallgrass) 
+
+dbpath <- "E:/tallgrass/data/NebraskaWellData_Paleozoic_Working.accdb"
+
+ch0<- RODBC::odbcDriverConnect(paste0("Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=",dbpath ))
+
+welldata0 <- RODBC::sqlFetch(ch0, "tblNebraskaWellData")
+tops <- RODBC::sqlFetch(ch0, "tblNebraskaWellData_Tops")
+legend <- RODBC::sqlFetch(ch0, "tbl_Legend")
+# welltype <- RODBC::sqlFetch(ch0, "Well_Type")
+statuscode <- RODBC::sqlFetch(ch0, "Well_Status_Codes")
+fmtn <- RODBC::sqlFetch(ch0, "tbl_Fmtn")
+statustype <- RODBC::sqlFetch(ch0, "tbl_Status_Type")
+welltype <- RODBC::sqlFetch(ch0, "Well_Type")
+
+RODBC::odbcClose(ch0) 
+```
+
+
+
+```{r}
+
+welldata <- welldata0 %>% 
+  clean_names() %>% 
+  rename(api = api_well_no) %>% 
+  rename(status = wl_status) %>% 
+  rename(twp = wh_twpn) %>% 
+  rename(rng = wh_rng_n) %>% 
+  rename(lat = wh_lat) %>% 
+  rename(lon = wh_long) %>% 
+  rename(sec = wh_sec)
+
+wells <- welldata %>% 
+  select(api, county, co_name, well_nm, well_typ, status, twp, rng, sec, dt_spud, dt_prod, dt_pa, lease_name, field, lat, lon) %>% 
+  # Add grepl grep-logical 
+  filter(grepl('CHEYENNE', as.factor(county), ignore.case = TRUE)) %>% 
+  filter(well_typ != "SWD") %>% 
+  unite(trs, c(twp, rng, sec), sep = "-") %>% 
+   mutate(year = year(dt_spud) )
+
+# write_csv(wells, "./data/tallgrass_wells.csv")
+    
+
+ 
+```
+ 
+
+```{r}
+tops <- tops %>% 
+  clean_names()
+
+tops2 <- tops %>% 
+  rename(api=api_well_no) %>% 
+  select(api, county, co_name, well_typ, wl_status, fmtn_cd, producing, dt_spud, dt_pa, well_name, field)
+
+```
+
+```{r eval=TRUE}
+minyear <-  min(wells$year, na.rm=TRUE)
+
+```
+
+The following is a summary of wells drilled in Cheyenne County, Nebraska from the year `r minyear` to February 17, 2022.  The data is provided by Nebraska Oil & Gas Commission. ^[Nebraska Oil and Gas Commission, http://www.nogcc.ne.gov/Publications/NebraskaWellData.zip (last visited April 18, 2022)]
+
+
+<br>  
+<br> 
+
+**Table 1.** Wells Drilled in Cheyenne County, Nebraska. 
+```{r}
+library(gt)
+
+wells %>% 
+  select(year, well_typ) %>% 
+  group_by(well_typ) %>% 
+  summarise(count = n()) %>%
+  mutate(freq = round(count/sum(count),2)) %>% 
+  arrange(desc(count)) %>% 
+  gt() %>% 
+  tab_header(
+    title = "Count of Wells Drilled by type",
+    subtitle = "Cheyenne County, NE"
+  ) %>% 
+  grand_summary_rows(
+    columns = c(count, freq),
+    fns = list(
+      sum = ~sum(.)),
+    formatter = fmt_number,
+    decimals = 0,
+    use_seps = FALSE
+  ) %>% 
+  tab_source_note(
+    source_note = "Source: Nebraska Oil & Gas Commission, Feb. 17, 2022.")
+
+``` 
+
+<br>  
+<br>  
+
+```{r }
+
+library(lubridate)
+wells1 <- wells %>% 
+ # mutate(year = as.factor(year(dt_spud) )) 
+   mutate(year = year(dt_spud) )
+
+# shag$year <- as.numeric(shag$year)  # transform year from character into numeric variable
+
+# Making a histogram to assess data distribution
+(wells.hist <- ggplot(wells1, aes(year, fill=well_typ)) + geom_histogram() + #theme.clean())
+   theme_minimal()) +
+  ggtitle("Histogram of Well Counts Drilled by Year\n Cheyenne Co. NE")
+```
+
+\newpage  
+<br> 
+
+
+
+<br> 
+<br> 
+<br> 
+
+
+
+```{r fig.cap="Figure 2. Geom Density by well type - Areas add up to 1.0"}
+# cyls <- as.factor(mtcars$cyl)
+# https://r-charts.com/distribution/histogram-group-ggplot2/  
+
+# Description of Geomdensity plots:  
+# https://www.youtube.com/watch?v=FzfE8tfbpvQ 
+
+ggplot(wells1, aes(x = year, fill = well_typ)) +
+  geom_density(alpha = 0.7) +
+  theme_grey() +  # Default
+  theme(legend.position = "top") +
+  ggtitle("Kernal Density Estimation Plot of Wells Drilled by Year\n Cheyenne Co. NE")
+         # subtitle = "Kernal Density Plot") 
+#  xlab("Dose (mg)") + ylab("Teeth length")
+```
+Sheather, S. J. and Jones, M. C. (1991). A reliable data-based bandwidth selection method for kernel density estimation. Journal of the Royal Statistical Society series B, 53, 683–690. doi: 10.1111/j.2517-6161.1991.tb01857.x. https://www.jstor.org/stable/2345597.
+

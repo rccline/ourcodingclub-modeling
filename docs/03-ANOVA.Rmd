@@ -1,0 +1,101 @@
+---
+title: "03-ANOVA"
+author: "Robert C Cline Sr"
+date: '2022-04-15'
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE) 
+library(kableExtra)
+library(tidyverse)
+library(here)
+```
+
+<br>  
+<br> 
+
+#### ANOVA is a linear regression  on a continuous response variable (Karen Grace-Martin, 2009).^[Why ANOVA and Linear Regression are the Same Analysis. (2009, March 11). The Analysis Factor. https://www.theanalysisfactor.com/why-anova-and-linear-regression-are-the-same-analysis/
+ ]  
+
+We just did with the apples in *01-LinearModels.Rmd*.  How does the mean yield vary depending on the spacing category? 
+
+It is also a linear model, but instead of getting a slope that allows us to predict the yield for any value of spacing, we get an estimate of the yield for each category.
+
+
+```{r}
+library(agridat)
+
+# Loading the dataset from agridat
+apples <- agridat::archbold.apple
+apples$spacing2 <- as.factor(apples$spacing)
+apples.m <- lm(yield ~ spacing2, data = apples)
+```
+
+
+<br>  
+<br> 
+
+#### ANOVA
+
+
+We just did with the apples in *01-LinearModels.Rmd*: how does the mean yield vary depending on the spacing category? 
+
+ANOVA is also a linear model, but *instead of getting a slope* that allows us to predict the yield for any value of spacing, *we get an estimate of the yield* for each category. 
+In the ANOVA, the categorical variable is *effect coded*.^[Interpreting Interactions Between Two Effect-Coded Categorical Predictors. (2011, October 21). The Analysis Factor. https://www.theanalysisfactor.com/interactions-effect-coded-predictors/]  
+
+<br>  
+  
+
+#### ANOVA vs. REGRESSION  
+* The same model but reported in different ways: 
+
+**In ANOVA**, means are reported and a p-value for each group.   
+**In Regression**, reports only one mean (the intercept) and differences of the other means; and the coefficients for intercept and slope are reported.  
+
+**Effect coding** Categories are coded with (1, -1). This means that each category’s mean is compared to the grand mean. 
+  
+
+
+**Dummy coding** -- In regression, which means that each category’s intercept is compared to the reference group‘s intercept.  Since the intercept is defined as the mean value when all other predictors = 0, and there are no other predictors, the three intercepts are just means. 
+
+1. The coefficients reflect actual cell mean differences and have meaningful interpretations as such.   
+2. When there is an interaction, the value of b1, eg, is the effect of X1 when X2=0.
+Since X2=0 for one category of X2, b12 is not a main effect (an overall effect of X1 across all values of X2).  It's a marginal effect: an effect of X1 at a signle value of X2.   
+
+
+
+
+```{r}
+anova(apples.m)
+```
+
+
+### Checking the assumptions.  
+1. Are the residuals normally distributed?  
+2. Are the data homoscedastic (i.e. the variance being the same around all variables)?  
+3. Are the observations independent?  
+
+```{r}
+
+# Checking that the residuals are normally distributed
+apples.resid <- resid(apples.m)              # Extracting the residuals
+shapiro.test(apples.resid)                   # Using the Shapiro-Wilk test
+# The null hypothesis of normal distribution is accepted: there is no significant difference (p > 0.05) from a normal distribution
+
+# Checking for homoscedasticity
+bartlett.test(apples$yield, apples$spacing2)
+bartlett.test(yield ~ spacing2, data = apples)  # Note that these two ways of writing the code give the same results
+# The null hypothesis of homoscedasticity is accepted
+```
+
+If the reisuals are not normally distributred or data are heteroscedastic, you can consider transforming your data using a logarithmic transformation of square root transformation.  
+
+```{r}
+plot(apples.m)  # you will have to press Enter in the command line to view the plots
+
+```
+
+[Understanding Diagnostic Plots for Linear Regression Models](https://data.library.virginia.edu/diagnostic-plots/)^[Understanding Diagnostic Plots for Linear Regression Analysis | University of Virginia Library Research Data Services + Sciences. (n.d.). Retrieved April 15, 2022, from https://data.library.virginia.edu/diagnostic-plots/]  
+

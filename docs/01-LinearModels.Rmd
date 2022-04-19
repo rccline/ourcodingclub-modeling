@@ -1,0 +1,152 @@
+---
+title: "Modeling"
+author: "Robert C Cline Sr"
+date: '2022-04-14'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE) 
+library(kableExtra)
+library(tidyverse)
+library(here)
+```
+
+ ### [OurCodingClub Modeling Tutorial](https://ourcodingclub.github.io/tutorials/modelling/)
+ 
+ Format: 
+ *What is the effect of the predictor.variable on the response.variable?  
+ temp.model <- lm(dependent/response.variable ~ predictor.variable)  
+ 
+ * `skylark.m <- lm(abundance ~ treatment + farm.area, family = poisson, data = skylarks)`   
+  - Abundance represents count  
+  - zero-inflated data allows for zero-valued observations, for which Poisson family is suitable.
+  
+* Continuous data use lm, mixed-effects models
+* Count data - 
+- Poisson: glm, glmm  
+* Proportion data
+  - if more outcomes:  chi-squared test
+  - habitat selection (does a species utilize a type of habitat in greater proportion than its availability.  
+  - chi squared:   differences in vegitation types between sites or over time
+  - binomial:  glm, glmm 
+  
+### Model structure  
+* Let the hypothesis guide you.  
+* what do you want to examine; what are the *confounding varibles* that influence the response?  
+
+E.g. `skylark.m <- lm(abundance ~ treatment + farm.area)`  
+
+
+### Overfitting  
+* If your model has a lot of variables, it has a danger of [*overfitting*](https://statisticsbyjim.com/regression/overfitting-regression-models/)  
+* The model will be super-tailored to this specific dataset.  
+
+### Collinearity  
+* If variables are very correlated, they will both explain similar amounts of variation in the response variables.  E.g. mixing elevation and air temp effect on tree height.  
+
+--- 
+
+### Practice with linear models  
+```{r}
+# install.packages("agridat")
+library(agridat)
+
+# Loading the dataset from agridat
+apples <- agridat::archbold.apple
+head(apples)
+summary(apples)
+```
+
+### Visualize the data  
+* [Create *theme.clean*](https://ourcodingclub.github.io/tutorials/data-vis-2/index.html)
+```{r}
+theme.clean <- function(){
+  theme_bw()+
+  theme(axis.text.x = element_text(size = 12, angle = 45, vjust = 1, hjust = 1),
+        axis.text.y = element_text(size = 12),
+        axis.title.x = element_text(size = 14, face = "plain"),             
+        axis.title.y = element_text(size = 14, face = "plain"),             
+        panel.grid.major.x = element_blank(),                                          
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_blank(),  
+        plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), units = , "cm"),
+        plot.title = element_text(size = 20, vjust = 1, hjust = 0.5),
+        legend.text = element_text(size = 12, face = "italic"),          
+        legend.position = "right")
+}
+```
+
+* Check  out the effect of spacing on apple yield.  
+* H0:  The closer apple trees aare to other apple trees, the more they compete for resources
+* Thus, the closer the trees are to each other, the less their yield.  
+
+* There are only three spacing distances, so make them a category.  
+
+```{r}
+apples$spacing2 <- as.factor(apples$spacing)
+
+library(ggplot2)
+
+(apples.p <- ggplot(apples, aes(spacing2, yield)) +
+    geom_boxplot(fill = "#CD3333", alpha = 0.8, colour = "#8B2323") +
+    theme.clean() +  
+    theme(axis.text.x = element_text(size = 12, angle = 0)) +
+  labs(x = "Spacing (m)", y = "Yield (kg)")) 
+
+
+```
+*Note that putting your entire ggplot code in brackets () creates the graph and then shows it in the plot viewer. If you don’t have the brackets, you’ve only created the object, but will need to call it to visualise the plot.* 
+
+From our boxplot, we can see that yield is pretty similar across the different spacing distances. Even though there is a trend towards higher yield at higher spacing, the range in the data across the categories almost completely overlap. From looking at this boxplot alone, one might think our hypothesis of higher yield at higher spacing is not supported. **Let’s run a model to explicitly test this.**  
+
+```{r results='asis'}
+# comment=NA # to remove all hashes
+apples.m <- lm(yield ~ spacing2, data = apples)
+# summary(apples.m) 
+
+
+```
+
+**Table 1.** Estimate is Intercept of mean of first Spacing level [6].
+```{r}
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)  
+
+tab_model(apples.m)
+```
+
+```{r echo=FALSE, out.width='100%'}
+knitr::include_graphics(here('img/1-lm.PNG'))
+``` 
+
+
+* R-squared values tend to increase as you add more terms to your model, but you also need to be wary of overfitting. The Adjusted R-squared value takes into account how many terms your model has and how many data points are available in the response variable.  
+
+
+Turns out that yield does significantly differ between the three spacing categories, so we can reject the null hypothesis of no effect of spacing on apple yield.
+
+**R2 value** You also get a Multiple R-squared value and an Adjusted R-squared value. These values refer to how much of the variation in the yield variable is explained by our predictor spacing2. 
+
+Spacing may not be a very important variable compared to other possible factors influencing yield, as spacing (*adjusted R2*) only explains around 15% of the variation in yield.  The adjusted R2 is `(apples.m) adj.r.squared
+
+```{r}
+
+library(gtsummary)
+
+m1 <- tbl_regression(apples.m, 
+                     exponentiate = FALSE
+                     ) %>% 
+    add_global_p() %>% 
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC))
+
+m1
+``` 
+
